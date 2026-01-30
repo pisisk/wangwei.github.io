@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>鬼畜精神污染 V3.0 - 实时合成版</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; -webkit-user-select: none; }
+        #canvas { width: 100%; height: 100%; display: block; }
+        
+        /* 启动界面 */
+        #ui-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 10000; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #f0f; }
+        .start-btn { padding: 25px 50px; font-size: 28px; background: #ff00ff; color: white; border: none; cursor: pointer; border-radius: 50px; box-shadow: 0 0 50px #ff00ff; font-weight: bold; transition: 0.3s; }
+        .start-btn:hover { transform: scale(1.1); }
+
+        /* 手机端专用控制台 - 电脑端隐藏 */
+        #mobile-controls {
+            position: absolute; bottom: 40px; left: 0; width: 100%;
+            display: none; justify-content: space-around; z-index: 999;
+        }
+        @media (max-width: 768px) { #mobile-controls { display: flex; } }
+
+        .ctrl-btn {
+            width: 75px; height: 75px; border-radius: 50%; background: rgba(255, 0, 255, 0.3);
+            border: 2px solid #ff00ff; color: white; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; font-size: 10px; backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .ctrl-btn:active { background: #ff00ff; transform: scale(0.9); }
+        .ctrl-btn b { font-size: 24px; margin-bottom: 2px; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="ui-overlay">
+        <button class="start-btn" onclick="init()">[ 释放精神污染 ]</button>
+        <p style="margin-top:20px; font-family:monospace;">警告：包含高能随机音效与闪烁画面</p>
+    </div>
+
+    <div id="mobile-controls">
+        <div class="ctrl-btn" onclick="changeMusic()"><b>🎵</b><span>切歌</span></div>
+        <div class="ctrl-btn" onclick="triggerEffect('chaos')"><b>🔥</b><span>狂乱</span></div>
+        <div class="ctrl-btn" onclick="triggerEffect('flash')"><b>🌈</b><span>闪烁</span></div>
+        <div class="ctrl-btn" onclick="triggerEffect('clear')"><b>🗑️</b><span>清屏</span></div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let faces = [];
+        const img = new Image();
+        img.src = 'face.jpg'; 
+
+        let audioCtx, masterGain;
+        let isStarted = false;
+        let flashMode = false;
+        let tempo = 120;
+
+        function initCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', initCanvas);
+        initCanvas();
+
+        class Face {
+            constructor(x, y) {
+                this.x = x || Math.random() * canvas.width;
+                this.y = y || Math.random() * canvas.height;
+                this.size = 40 + Math.random() * 160;
+                this.vx = (Math.random() - 0.5) * 15;
+                this.vy = (Math.random() - 0.5) * 15;
+                this.angle = 0;
+                this.av = (Math.random() - 0.5) * 0.3;
+                this.hue = Math.random() * 360;
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy; this.angle += this.av;
+                if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+            }
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                ctx.filter = `hue-rotate(${this.hue + (Date.now()/10 % 360)}deg) ${flashMode ? 'invert(1)' : ''}`;
+                ctx.drawImage(img, -this.size/2, -this.size/2, this.size, this.size);
+                ctx.restore();
+            }
+        }
+
+        // --- 随机鬼畜音乐引擎 ---
+        function createSynth(freq, type, duration, vol) {
+            const osc = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(freq/2, audioCtx.currentTime + duration);
+            g.gain.setValueAtTime(vol, audioCtx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+            osc.connect(g);
+            g.connect(masterGain);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function musicLoop() {
+            if(!isStarted) return;
+            // 随机节奏：永不重复的序列
+            const types = ['square', 'sawtooth', 'triangle'];
+            const notes = [110, 220, 330, 440, 554, 659, 880];
+            
+            // 随机生成底鼓感
+            createSynth(50 + Math.random()*50, 'sine', 0.2, 0.5);
+            
+            // 随机生成鬼畜高音
+            if(Math.random() > 0.3) {
+                createSynth(notes[Math.floor(Math.random()*notes.length)] * (Math.random() > 0.8 ? 2 : 1), 
+                            types[Math.floor(Math.random()*3)], 0.15, 0.1);
+            }
+
+            setTimeout(musicLoop, (60000 / tempo) / (Math.random() > 0.9 ? 4 : 2));
+        }
+
+        function changeMusic() {
+            tempo = 80 + Math.random() * 200;
+            flashMode = !flashMode;
+            setTimeout(()=> flashMode = false, 500);
+        }
+
+        // --- 交互逻辑 ---
+        function init() {
+            document.getElementById('ui-overlay').classList.add('hidden');
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 0.3;
+            masterGain.connect(audioCtx.destination);
+            isStarted = true;
+            for(let i=0; i<6; i++) faces.push(new Face());
+            musicLoop();
+            animate();
+        }
+
+        function triggerEffect(type) {
+            if(!isStarted) return;
+            if(type === 'chaos') {
+                for(let i=0; i<15; i++) faces.push(new Face());
+                tempo += 20;
+            } else if(type === 'flash') {
+                flashMode = true;
+                setTimeout(() => flashMode = false, 1500);
+            } else if(type === 'clear') {
+                faces = [];
+                tempo = 120;
+            }
+            createSynth(Math.random()*2000, 'sawtooth', 0.1, 0.2);
+        }
+
+        window.addEventListener('mousedown', (e) => {
+            if(!isStarted) return;
+            faces.push(new Face(e.clientX, e.clientY));
+            createSynth(200 + Math.random()*1000, 'square', 0.05, 0.1);
+        });
+
+        function animate() {
+            ctx.fillStyle = flashMode ? `rgb(${Math.random()*255},0,${Math.random()*255})` : `rgba(0,0,0,0.15)`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            faces.forEach((f, i) => {
+                f.update();
+                f.draw();
+                if(faces.length > 100 && Math.random() > 0.98) faces.splice(i, 1);
+            });
+            requestAnimationFrame(animate);
+        }
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+</body>
+</html>
