@@ -1,14 +1,18 @@
 {
-  "name": "男神大冒险闯关版",
-  "short_name": "大冒险",
-  "description": "基于头像定制的闯关游戏",
-  "start_url": "./index.html",
+  "name": "极度鬼畜精神污染",
+  "short_name": "鬼畜",
+  "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#2c3e50",
-  "theme_color": "#2c3e50",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "icons": [
     {
-      "src": "avatar.jpg",
+      "src": "face.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "face.jpg",
       "sizes": "512x512",
       "type": "image/jpeg"
     }
